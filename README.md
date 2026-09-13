@@ -15,6 +15,14 @@
 
 这些适配只针对已验证的 Xiaomi Touch，不宣称支持所有 Android 触摸板。
 
+### WorkBuddy 构建与发布
+
+GitHub Actions 会在普通提交和 Pull Request 上运行 NonRoot 单元测试并编译 Debug APK。Release 工作流也支持手动运行以验证正式签名构建，但只有推送与 `app/build.gradle` 中 `versionName` 完全一致的 `v*` 标签时才会创建 GitHub Release。
+
+正式发布包含 `Moonlight-WorkBuddy-<version>.apk` 和 `SHA256SUMS.txt`。签名证书保存在 GitHub `release` Environment 中，并固定校验证书 SHA-256：`1427DD5A9FEA1B17A0D04EEBED6B510EF66F9DC8A830028D31BF5A446AB6044C`。`v12.2-workbuddy.1` 是最后一个本机构建版本，从下一个版本开始由 GitHub Actions 自动发布；已有标签和 Release 不允许覆盖。
+
+维护新版本时，先提升 `versionName` 和 `versionCode`，等待分支 CI 通过，再创建并推送 `v${versionName}` 标签。CI 和 Pull Request 无权读取正式签名 Secrets。
+
 Moonlight for Android will allow you to stream your full collection of games from your Windows PC to your Android device,
 whether in your own home or over the internet.
 
