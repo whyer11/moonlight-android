@@ -124,6 +124,9 @@
     <string name="category_input_settings">输入设置</string>
     <string name="title_checkbox_touchscreen_trackpad">将触控屏作为触控板使用</string>
     <string name="summary_checkbox_touchscreen_trackpad">如果启用，则将触控屏作为触控板使用。 如果禁止，则触控屏直接控制鼠标光标。</string>
+    <string name="title_xiaomi_touchpad_scroll_speed">小米触控板滚动速度</string>
+    <string name="summary_xiaomi_touchpad_scroll_speed">100% 是修正后的基准值，不是原版速度；只影响 Xiaomi Touch 双指滚动。</string>
+    <string name="suffix_percent">%</string>
     <string name="title_checkbox_multi_controller"> 自动检测手柄 </string>
     <string name="summary_checkbox_multi_controller"> 禁用此项所有手柄将视为一个手柄 </string>
     <string name="title_checkbox_vibrate_fallback"> 用设备震动模拟游戏震动效果 </string>

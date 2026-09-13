@@ -144,6 +144,16 @@
             android:title="@string/title_checkbox_absolute_mouse_mode"
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="xiaomi_touchpad_scroll_percent"
+            android:defaultValue="100"
+            seekbar:min="25"
+            android:max="300"
+            seekbar:step="5"
+            seekbar:keyStep="5"
+            android:title="@string/title_xiaomi_touchpad_scroll_speed"
+            android:summary="@string/summary_xiaomi_touchpad_scroll_speed"
+            android:text="@string/suffix_percent" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls">

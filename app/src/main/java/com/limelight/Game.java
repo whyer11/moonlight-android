@@ -4,6 +4,7 @@ package com.limelight;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
+import com.limelight.binding.input.ExternalPointerNormalizer;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
@@ -114,6 +115,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private VirtualController virtualController;
 
     private PreferenceConfiguration prefConfig;
+    private ExternalPointerNormalizer externalPointerNormalizer;
     private SharedPreferences tombstonePrefs;
 
     private NvConnection conn;
@@ -217,6 +219,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        externalPointerNormalizer =
+                new ExternalPointerNormalizer(prefConfig.xiaomiTouchpadScrollPercent);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
 
         // Enter landscape unless we're on a square screen
@@ -742,6 +746,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
 
+        if (!hasFocus) {
+            resetExternalPointerState();
+        }
+
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0;
@@ -1148,6 +1156,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void setInputGrabState(boolean grab) {
+        if (!grab) {
+            resetExternalPointerState();
+        }
+
         // Grab/ungrab the mouse cursor
         if (grab) {
             inputCaptureProvider.enableCapture();
@@ -1166,6 +1178,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         setMetaKeyCaptureState(grab);
 
         grabbedInput = grab;
+    }
+
+    private void resetExternalPointerState() {
+        if (externalPointerNormalizer != null
+                && externalPointerNormalizer.reset()
+                && conn != null) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+            lastButtonState &= ~MotionEvent.BUTTON_PRIMARY;
+        }
     }
 
     private final Runnable toggleGrab = new Runnable() {
@@ -1813,7 +1834,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     eventSource == 12290) // 12290 = Samsung DeX mode desktop mouse
             {
                 int buttonState = event.getButtonState();
-                int changedButtons = buttonState ^ lastButtonState;
 
                 // The DeX touchpad on the Fold 4 sends proper right click events using BUTTON_SECONDARY,
                 // but doesn't send BUTTON_PRIMARY for a regular click. Instead it sends ACTION_DOWN/UP,
@@ -1830,8 +1850,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                         // so be sure to add that bit back into the button state.
                         buttonState |= (lastButtonState & MotionEvent.BUTTON_PRIMARY);
                     }
-
-                    changedButtons = buttonState ^ lastButtonState;
                 }
 
                 // Ignore mouse input if we're not capturing from our input source
@@ -1840,6 +1858,23 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     // Android to synthesize d-pad events.
                     return true;
                 }
+
+                InputDevice inputDevice = event.getDevice();
+                String deviceName = inputDevice != null ? inputDevice.getName() : "";
+                boolean capturedRelative = eventSource == InputDevice.SOURCE_MOUSE_RELATIVE;
+                boolean motionLikeAction = event.getActionMasked() == MotionEvent.ACTION_MOVE
+                        || event.getActionMasked() == MotionEvent.ACTION_HOVER_MOVE
+                        || event.getActionMasked() == MotionEvent.ACTION_SCROLL;
+
+                externalPointerNormalizer.observePrimaryButton(
+                        deviceName,
+                        (buttonState & MotionEvent.BUTTON_PRIMARY) != 0);
+                if (externalPointerNormalizer.shouldSuppressPhysicalMotion(
+                        deviceName, capturedRelative, motionLikeAction)) {
+                    return true;
+                }
+
+                int changedButtons = buttonState ^ lastButtonState;
 
                 // Always update the position before sending any button events. If we're
                 // dealing with a stylus without hover support, our position might be
@@ -1896,9 +1931,20 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 if (event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll((short)(event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
-                    conn.sendMouseHighResHScroll((short)(event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                    if (externalPointerNormalizer.isXiaomiCapturedTouchpad(
+                            deviceName, capturedRelative)) {
+                        conn.sendMouseHighResScroll(externalPointerNormalizer
+                                .normalizeVerticalScroll(event.getAxisValue(MotionEvent.AXIS_VSCROLL)));
+                        conn.sendMouseHighResHScroll(externalPointerNormalizer
+                                .normalizeHorizontalScroll(event.getAxisValue(MotionEvent.AXIS_HSCROLL)));
+                    }
+                    else {
+                        // Preserve the original behavior for ordinary mice and other devices.
+                        conn.sendMouseHighResScroll((short)
+                                (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * 120));
+                        conn.sendMouseHighResHScroll((short)
+                                (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * 120));
+                    }
                 }
 
                 if ((changedButtons & MotionEvent.BUTTON_PRIMARY) != 0) {
