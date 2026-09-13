@@ -1181,12 +1181,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void resetExternalPointerState() {
-        if (externalPointerNormalizer != null
-                && externalPointerNormalizer.reset()
-                && conn != null) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
-            lastButtonState &= ~MotionEvent.BUTTON_PRIMARY;
+        if (externalPointerNormalizer == null || !externalPointerNormalizer.reset()) {
+            return;
         }
+
+        if (conn != null) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT);
+        }
+        lastButtonState &= ~MotionEvent.BUTTON_PRIMARY;
     }
 
     private final Runnable toggleGrab = new Runnable() {
