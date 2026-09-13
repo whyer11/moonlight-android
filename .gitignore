@@ -40,5 +40,11 @@ build/
 **/jniLibs
 app/.externalNativeBuild/
 
+# Release signing material
+*.jks
+*.keystore
+*.p12
+.signing/
+
 # NDK stuff
 .cxx/

@@ -1,5 +1,20 @@
 apply plugin: 'com.android.application'
 
+def releaseSigning = [
+        storeFile: System.getenv('ANDROID_KEYSTORE_FILE'),
+        storePassword: System.getenv('ANDROID_KEYSTORE_PASSWORD'),
+        keyAlias: System.getenv('ANDROID_KEY_ALIAS'),
+        keyPassword: System.getenv('ANDROID_KEY_PASSWORD')
+]
+def releaseSigningPresent = releaseSigning.values().any { it != null && !it.trim().isEmpty() }
+def releaseSigningComplete = releaseSigning.values().every { it != null && !it.trim().isEmpty() }
+def ciReleaseTaskRequested = System.getenv('CI') == 'true' &&
+        gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+
+if ((releaseSigningPresent && !releaseSigningComplete) || (ciReleaseTaskRequested && !releaseSigningComplete)) {
+    throw new GradleException('Release signing environment is incomplete')
+}
+
 android {
     ndkVersion "29.0.14206865"
 
@@ -55,6 +70,21 @@ android {
         }
     }
 
+    if (releaseSigningComplete) {
+        signingConfigs {
+            release {
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+                storeType 'PKCS12'
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
     compileOptions {
         encoding "UTF-8"
         sourceCompatibility JavaVersion.VERSION_17
@@ -90,6 +120,10 @@ android {
         release {
             resValue "string", "app_label", "Moonlight WorkBuddy"
             resValue "string", "app_label_root", "Moonlight WorkBuddy Root"
+
+            if (releaseSigningComplete) {
+                signingConfig signingConfigs.release
+            }
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
