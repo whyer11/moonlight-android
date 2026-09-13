@@ -5,6 +5,16 @@
 
 [Moonlight for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
+## Moonlight WorkBuddy fork
+
+此分支基于 Moonlight Android `b48494cb96bff23d8886c4775cc4f39a1075495d`（12.2），保留原项目的 GPL-3.0 许可。定制范围仅包括：
+
+* Xiaomi Touch 双指滚动倍率与余数归一化
+* WorkBuddy 三指拖动期间的实体触摸板输入 gate
+* 可与官方 Moonlight 并存的独立应用包名
+
+这些适配只针对已验证的 Xiaomi Touch，不宣称支持所有 Android 触摸板。
+
 Moonlight for Android will allow you to stream your full collection of games from your Windows PC to your Android device,
 whether in your own home or over the internet.
 
